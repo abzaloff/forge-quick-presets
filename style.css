@@ -1,0 +1,156 @@
+.forge-quick-presets-panel {
+    margin-top: 10px;
+    border: 1px solid var(--border-color-primary, #344156);
+    border-radius: 6px;
+    background: var(--block-background-fill, #111827);
+    color: var(--body-text-color, #d8dee9);
+}
+
+.forge-quick-presets-panel .fqp-head {
+    border-bottom: 1px solid var(--border-color-primary, #344156);
+}
+
+.forge-quick-presets-panel .fqp-toggle {
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.forge-quick-presets-panel .fqp-body {
+    padding: 10px 10px 8px;
+}
+
+.forge-quick-presets-panel .fqp-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.forge-quick-presets-panel .fqp-row:last-child {
+    margin-bottom: 0;
+}
+
+.forge-quick-presets-panel .fqp-actions {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.forge-quick-presets-panel select,
+.forge-quick-presets-panel button {
+    min-height: 36px;
+    border-radius: 6px;
+    font: inherit;
+    font-weight: 600;
+}
+
+.forge-quick-presets-panel button {
+    border: 1px solid var(--button-secondary-border-color, var(--border-color-primary, #3b4658));
+    background: var(--button-secondary-background-fill, #273244);
+    color: var(--button-secondary-text-color, var(--body-text-color, #eef2f7));
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.forge-quick-presets-panel button:hover {
+    background: var(--button-secondary-background-fill-hover, #334155);
+    border-color: var(--button-secondary-border-color-hover, #526073);
+}
+
+.forge-quick-presets-panel button:active {
+    transform: translateY(1px);
+}
+
+.forge-quick-presets-panel button:disabled {
+    opacity: 0.68;
+    cursor: default;
+    transform: none;
+}
+
+.forge-quick-presets-panel .fqp-apply {
+    border-color: var(--button-primary-border-color, #f97316);
+    background: var(--button-primary-background-fill, #ff5d1a);
+    color: var(--button-primary-text-color, #ffffff);
+}
+
+.forge-quick-presets-panel .fqp-apply:hover {
+    background: var(--button-primary-background-fill-hover, #ff6f2c);
+}
+
+.forge-quick-presets-panel .fqp-apply.fqp-applied,
+.forge-quick-presets-panel .fqp-apply.fqp-applied:hover {
+    border-color: var(--button-secondary-border-color, var(--border-color-primary, #3b4658));
+    background: var(--button-secondary-background-fill, #273244);
+    color: var(--body-text-color-subdued, #9aa7b6);
+}
+
+.forge-quick-presets-panel .fqp-toggle {
+    min-height: 0;
+}
+
+.forge-quick-presets-panel select {
+    border: 1px solid var(--input-border-color, var(--border-color-primary, #344156));
+    background-color: var(--input-background-fill, var(--block-background-fill, #1f2937));
+    color: var(--input-text-color, var(--body-text-color, #e5e7eb));
+    color-scheme: dark;
+    padding: 0 12px;
+}
+
+.forge-quick-presets-panel select:focus {
+    outline: 1px solid var(--input-border-color-focus, var(--button-primary-border-color, #7aa2ff));
+    outline-offset: 1px;
+}
+
+.forge-quick-presets-panel select option {
+    background-color: var(--input-background-fill, #1f2937);
+    color: var(--input-text-color, #e5e7eb);
+}
+
+.forge-quick-presets-panel select option:checked {
+    background-color: var(--button-primary-background-fill, #2563eb);
+    color: var(--button-primary-text-color, #ffffff);
+}
+
+.forge-quick-presets-panel .fqp-status {
+    display: none;
+    min-height: 0;
+    color: var(--body-text-color-subdued, #9aa7b6);
+    font-size: 12px;
+    line-height: 16px;
+}
+
+.forge-quick-presets-panel .fqp-status:not(:empty) {
+    display: block;
+    margin-top: 2px;
+}
+
+.forge-quick-presets-panel .fqp-status.fqp-error {
+    color: #ff7a7a;
+}
+
+.fqp-silent-dropdown [role="listbox"]:has([role="option"]),
+.fqp-silent-dropdown .options:has([role="option"]),
+.fqp-silent-dropdown .options:has(li),
+.fqp-silent-dropdown .dropdown-options:has([role="option"]),
+.fqp-silent-dropdown .select-options:has([role="option"]),
+.fqp-silent-dropdown ul[role="listbox"]:has([role="option"]),
+.fqp-hidden-dropdown-options {
+    position: fixed !important;
+    top: 0 !important;
+    left: -10000px !important;
+    z-index: -1 !important;
+    width: 1px !important;
+    min-width: 1px !important;
+    max-width: 1px !important;
+    height: 1px !important;
+    min-height: 1px !important;
+    max-height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}

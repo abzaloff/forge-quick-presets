@@ -1,0 +1,17 @@
+# Local cache and build artifacts
+.uv-cache/
+__pycache__/
+*.py[cod]
+
+# User presets and automatic backups
+presets/user_presets.json
+presets/user_presets.json.bak-*
+presets/user_presets.json.broken-*
+
+# Local Forge/Gradio diagnostic dumps
+gradio_config.json
+select_script_response.json
+
+# Local environment files
+.env
+.env.*
