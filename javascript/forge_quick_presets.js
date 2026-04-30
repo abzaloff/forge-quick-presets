@@ -4,6 +4,7 @@
     const API = "/forge-quick-presets";
     const PANEL_ID_PREFIX = "forge_quick_presets_panel";
     const PANEL_CLASS = "forge-quick-presets-panel";
+    const SPECIAL_TAB_FIELD_IDS = ["img2img_tabs_resize"];
     const EXCLUDED_ID_PATTERNS = [
         /^forge_ui_preset$/,
         /^forge_ui_dtype$/,
@@ -281,7 +282,22 @@
             };
         }
         addControlNetRangeSliders(fields);
+        addSpecialTabFields(fields);
         return fields;
+    }
+
+    function addSpecialTabFields(fields) {
+        for (const id of SPECIAL_TAB_FIELD_IDS) {
+            const root = findComponentById(id);
+            if (!root || root.closest(`.${PANEL_CLASS}`)) continue;
+            const value = readSelectedTab(root);
+            if (!value) continue;
+            fields[id] = {
+                id,
+                label: labelFor(root),
+                value,
+            };
+        }
     }
 
     function addControlNetRangeSliders(fields) {
@@ -658,9 +674,33 @@
         return true;
     }
 
+    function readSelectedTab(root) {
+        const selected = root.querySelector("button.selected, button[aria-selected='true'], [role='tab'][aria-selected='true'], .tab-nav button.selected");
+        return selected?.textContent?.trim()?.replace(/\s+/g, " ") || null;
+    }
+
+    async function setSelectedTab(root, value) {
+        const label = `${value}`;
+        if (readSelectedTab(root) === label) return true;
+
+        const candidates = Array.from(root.querySelectorAll("button, [role='tab']"));
+        const target = candidates.find((node) => node.textContent?.trim()?.replace(/\s+/g, " ") === label);
+        if (!target) return false;
+
+        dispatchFullClick(target);
+        await sleep(250);
+        return readSelectedTab(root) === label;
+    }
+
     async function applyField(field) {
         const root = findComponentById(field.id);
-        if (!root || isExcludedRoot(root)) return false;
+        if (!root) return false;
+
+        if (SPECIAL_TAB_FIELD_IDS.includes(field.id)) {
+            return await setSelectedTab(root, field.value);
+        }
+
+        if (isExcludedRoot(root)) return false;
 
         if (field.id === "script_list") {
             return await setScriptList(root, field);
@@ -947,6 +987,7 @@
 
     function fieldApplyPriority(field) {
         const id = field?.id || "";
+        if (SPECIAL_TAB_FIELD_IDS.includes(id)) return 0;
         if (id.endsWith("_controlnet_type_filter_radio")) return 0;
         if (id.endsWith("_controlnet_preprocessor_dropdown") || id.endsWith("_controlnet_model_dropdown")) return 2;
         return 1;
