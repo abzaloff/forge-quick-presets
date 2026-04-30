@@ -805,8 +805,7 @@
             const option = document.createElement("option");
             option.value = preset.key || `${preset.tab || tab}::${preset.name}`;
             option.dataset.name = preset.name;
-            const suffix = preset.field_count ? ` (${preset.field_count})` : "";
-            option.textContent = `${preset.name}${suffix}`;
+            option.textContent = preset.name;
             select.appendChild(option);
         }
         select.value = previous;
