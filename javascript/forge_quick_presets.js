@@ -664,6 +664,46 @@
         return activeTabRoot().querySelector(`#${escaped}`) || app().getElementById(id);
     }
 
+    function findComponentForField(field) {
+        const exact = findComponentById(field.id);
+        if (exact) return exact;
+        if (!isUnstableFieldId(field.id)) return null;
+
+        const candidates = componentRoots()
+            .filter((root) => labelFor(root) === field.label)
+            .filter((root) => sameFieldKind(root, field));
+
+        if (candidates.length === 0) return null;
+        return candidates.find(isVisible) || candidates[0];
+    }
+
+    function isUnstableFieldId(id) {
+        return /^\.?input-accordion-\d+$/.test(id || "") || /^component-\d+$/.test(id || "");
+    }
+
+    function sameFieldKind(root, field) {
+        if (typeof field.value === "boolean") {
+            return Boolean(root.querySelector("input[type='checkbox']"));
+        }
+        if (typeof field.value === "number") {
+            return Boolean(root.querySelector("input[type='number'], input[type='range'], input[data-testid='number-input']"));
+        }
+        if (typeof field.value === "string") {
+            return Boolean(root.querySelector("textarea, select, input:not([type='hidden'])"));
+        }
+        return true;
+    }
+
+    async function activatePanelByLabel(label) {
+        if (!label) return false;
+        const buttons = Array.from(activeTabRoot().querySelectorAll("button, [role='tab']"));
+        const target = buttons.find((button) => button.textContent?.trim()?.replace(/\s+/g, " ") === label);
+        if (!target) return false;
+        dispatchFullClick(target);
+        await sleep(350);
+        return true;
+    }
+
     function setRangeSlider(root, value) {
         if (!Array.isArray(value) || value.length < 2) return false;
         const inputs = Array.from(root.querySelectorAll("input[type='range'], input[type='number']"));
@@ -693,8 +733,8 @@
     }
 
     async function applyField(field) {
-        const root = findComponentById(field.id);
-        if (!root) return false;
+        const root = findComponentForField(field);
+        if (!root) return await applyMissingUnstableField(field);
 
         if (SPECIAL_TAB_FIELD_IDS.includes(field.id)) {
             return await setSelectedTab(root, field.value);
@@ -741,6 +781,11 @@
         }
 
         return await setDropdown(root, field.value);
+    }
+
+    async function applyMissingUnstableField(field) {
+        if (!isUnstableFieldId(field.id) || field.value !== true) return false;
+        return await activatePanelByLabel(field.label);
     }
 
     async function request(path, options) {
@@ -987,6 +1032,8 @@
     function fieldApplyPriority(field) {
         const id = field?.id || "";
         if (SPECIAL_TAB_FIELD_IDS.includes(id)) return 0;
+        if (isUnstableFieldId(id) && field?.label !== "Enable") return 0;
+        if (isUnstableFieldId(id) && field?.label === "Enable") return 1;
         if (id.endsWith("_controlnet_type_filter_radio")) return 0;
         if (id.endsWith("_controlnet_preprocessor_dropdown") || id.endsWith("_controlnet_model_dropdown")) return 2;
         return 1;
