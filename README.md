@@ -34,11 +34,8 @@ To revise an existing quick preset:
 
 Notes:
 
-- `Apply` and `Reset` preserve the user's scroll position.
-- Programmatic dropdown selections are hidden to avoid page jumps and large dropdown flashes.
 - Native Forge `UI Preset`s are not modified; quick presets are stored separately.
 - ControlNet image, mask, gallery, and upload fields are intentionally ignored.
-- ControlNet `Control Type` is treated as a filter, not a saved generation parameter; quick presets reset it to `All` before selecting saved models and preprocessors.
 
 Presets are stored in `presets/user_presets.json`.
 
