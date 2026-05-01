@@ -41,6 +41,10 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.forge-quick-presets-panel .fqp-preset-row {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .forge-quick-presets-panel select,
 .forge-quick-presets-panel button {
     min-height: 36px;
@@ -73,6 +77,7 @@
 }
 
 .forge-quick-presets-panel .fqp-apply {
+    display: none;
     border-color: var(--button-primary-border-color, #f97316);
     background: var(--button-primary-background-fill, #ff5d1a);
     color: var(--button-primary-text-color, #ffffff);

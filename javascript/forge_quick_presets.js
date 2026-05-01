@@ -1090,6 +1090,8 @@
         try {
             const result = await resetChangedFieldsToBaseline(panel, true);
             await deactivateScriptsSectionIfNone();
+            const select = panel?.querySelector(".fqp-select");
+            if (select) select.value = "";
             clearAppliedState(panel);
             if (result) setStatus(`Reset ${result.applied}/${result.total} changed fields.`, false, panel);
         } finally {
@@ -1223,7 +1225,14 @@
     }
 
     function wirePanel(panel) {
-        panel.querySelector(".fqp-select").addEventListener("change", () => updateApplyButtonState(panel));
+        panel.querySelector(".fqp-select").addEventListener("change", () => {
+            updateApplyButtonState(panel);
+            if (selectedPresetKey(panel)) {
+                applySelected().catch((error) => setStatus(error.message, true, panel));
+            } else {
+                resetToBaseline().catch((error) => setStatus(error.message, true, panel));
+            }
+        });
         panel.querySelector(".fqp-save").addEventListener("click", () => saveChanged().catch((error) => setStatus(error.message, true, panel)));
         panel.querySelector(".fqp-update").addEventListener("click", () => updateSelected().catch((error) => setStatus(error.message, true, panel)));
         panel.querySelector(".fqp-apply").addEventListener("click", () => applySelected().catch((error) => setStatus(error.message, true, panel)));
@@ -1241,7 +1250,7 @@
                 <button class="fqp-toggle" type="button" aria-expanded="true" title="Show or hide Forge Quick Presets.">Quick Presets</button>
             </div>
             <div class="fqp-body">
-                <div class="fqp-row">
+                <div class="fqp-row fqp-preset-row">
                     <select class="fqp-select" aria-label="Quick preset" title="Saved user preset with only changed UI fields."></select>
                     <button class="fqp-apply" type="button" title="Apply the selected quick preset to the current Forge UI.">Apply</button>
                 </div>
