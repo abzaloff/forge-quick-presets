@@ -844,7 +844,7 @@
         select.innerHTML = "";
         const empty = document.createElement("option");
         empty.value = "";
-        empty.textContent = `Select ${tab} preset`;
+        empty.textContent = "None";
         select.appendChild(empty);
         for (const preset of presets) {
             const option = document.createElement("option");
