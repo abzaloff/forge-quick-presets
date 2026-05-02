@@ -323,12 +323,28 @@
 
         for (const [id, field] of Object.entries(current)) {
             if (isControlNetTypeFilterId(id)) continue;
+            if (!isControlNetFieldEnabled(id, current)) continue;
             if (!baseline[id] || !equalValues(field.value, baseline[id].value)) {
                 changed[id] = field;
             }
         }
 
         return changed;
+    }
+
+    function isControlNetFieldEnabled(id, current) {
+        const enableId = controlNetEnableFieldId(id);
+        if (!enableId) return true;
+        if (id === enableId) return true;
+        const enableField = current?.[enableId];
+        return !enableField || enableField.value === true;
+    }
+
+    function controlNetEnableFieldId(id) {
+        if (!id?.includes("_controlnet_")) return null;
+        const index = id.lastIndexOf("_controlnet_");
+        if (index < 0) return null;
+        return `${id.slice(0, index)}_controlnet_enable_checkbox`;
     }
 
     function setNativeValue(element, value) {
@@ -374,6 +390,13 @@
             setNativeValue(input, label);
             await sleep(120);
 
+            if (isMainSamplerEuler(root, label)) {
+                dispatchKeyboard(input, "ArrowDown");
+                await sleep(80);
+                dispatchKeyboard(input, "Enter");
+                return await waitForDropdownValue(root, label);
+            }
+
             const option = findDropdownOption(label);
             if (option) {
                 hideDropdownOptionContainer(option);
@@ -391,6 +414,18 @@
         } finally {
             endSilentDropdown();
         }
+    }
+
+    function isMainSamplerEuler(root, label) {
+        return label === "Euler" && /^(txt2img|img2img)_sampling$/.test(root?.id || "");
+    }
+
+    async function waitForDropdownValue(root, label, attempts = 8) {
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+            if (readDropdown(root) === label) return true;
+            await sleep(100);
+        }
+        return false;
     }
 
     function beginSilentDropdown() {
@@ -885,15 +920,22 @@
         const name = window.prompt("Quick preset name");
         if (!name || !name.trim()) return;
 
+        const tab = activeTabName();
+        const cleanName = name.trim();
+        const key = `${tab}::${cleanName}`;
         const payload = {
-            name: name.trim(),
-            tab: activeTabName(),
+            name: cleanName,
+            tab,
             base_preset: currentForgePreset(),
             fields,
         };
         const data = await request("/save", { method: "POST", body: JSON.stringify(payload) });
         state.presets = data.presets || [];
         updatePresetSelect(panel);
+        const select = panel?.querySelector(".fqp-select");
+        if (select) select.value = key;
+        state.appliedFields[tab] = Object.values(fields);
+        setAppliedState(panel, key);
         setStatus(`Saved ${count} changed fields.`, false, panel);
     }
 
