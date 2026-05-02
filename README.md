@@ -19,12 +19,15 @@ Excluded by default:
 - generate/interrupt/skip controls
 - ControlNet `Control Type` filter state
 
-Typical flow:
+Recommended save flow:
 
-1. Choose a native Forge `UI Preset`.
-2. Change any settings you want to bundle: generation settings, Refiner, ControlNet units, ADetailer, Scripts, extension fields, denoise, CFG, steps, and similar UI controls.
-3. Press `Save Changed`.
-4. Later choose the native Forge preset again, then apply the saved quick preset.
+1. Press `Reset` to return the current tab to the captured baseline before starting a new quick preset.
+2. Choose the native Forge `UI Preset` / model type that the new quick preset should belong to.
+3. Make only the changes that should be saved: generation settings, Refiner, ControlNet units, ADetailer, Scripts, extension fields, denoise, CFG, steps, and similar UI controls.
+4. Press `Save Changed`.
+5. Before saving another quick preset, press `Reset` again, switch to the needed native Forge `UI Preset`, then make the next set of changes.
+
+When applying a quick preset later, choose the matching native Forge `UI Preset` first, then apply the saved quick preset.
 
 To revise an existing quick preset:
 
