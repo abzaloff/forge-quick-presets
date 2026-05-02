@@ -5,6 +5,12 @@
     const PANEL_ID_PREFIX = "forge_quick_presets_panel";
     const PANEL_CLASS = "forge-quick-presets-panel";
     const SPECIAL_TAB_FIELD_IDS = ["img2img_tabs_resize"];
+    const PAIRED_FIELD_IDS = {
+        txt2img_sampling: "txt2img_scheduler",
+        txt2img_scheduler: "txt2img_sampling",
+        img2img_sampling: "img2img_scheduler",
+        img2img_scheduler: "img2img_sampling",
+    };
     const EXCLUDED_ID_PATTERNS = [
         /^forge_ui_preset$/,
         /^forge_ui_dtype$/,
@@ -330,7 +336,16 @@
             }
         }
 
+        addPairedChangedFields(changed, current);
         return changed;
+    }
+
+    function addPairedChangedFields(changed, current) {
+        for (const id of Object.keys(changed)) {
+            const pairedId = PAIRED_FIELD_IDS[id];
+            if (!pairedId || changed[pairedId] || !current[pairedId]) continue;
+            changed[pairedId] = current[pairedId];
+        }
     }
 
     function isControlNetFieldEnabled(id, current) {
@@ -1033,7 +1048,8 @@
             const preset = await request(`/get/${encodeURIComponent(key)}`);
             let applied = 0;
             const fields = preset.fields || {};
-            const entries = enrichPresetFields(Object.values(fields)).filter((field) => !isUnsafeUnstableEnableField(field));
+            const rawEntries = await addSourceBaselinePairedEntries(Object.values(fields), preset);
+            const entries = enrichPresetFields(rawEntries).filter((field) => !isUnsafeUnstableEnableField(field));
             const nextFieldIds = new Set(entries.map((field) => field.id).filter(Boolean));
 
             await resetChangedFieldsToBaseline(panel, false, {
@@ -1072,6 +1088,25 @@
         } finally {
             endPreserveScroll();
         }
+    }
+
+    async function addSourceBaselinePairedEntries(entries, preset) {
+        const result = [...entries];
+        const ids = new Set(result.map((field) => field?.id).filter(Boolean));
+        const missingIds = Object.entries(PAIRED_FIELD_IDS)
+            .filter(([id, pairedId]) => ids.has(id) && !ids.has(pairedId))
+            .map(([, pairedId]) => pairedId);
+        if (missingIds.length === 0 || !preset?.base_preset) return result;
+
+        const sourceBaseline = await forgeConfigBaseline(preset.base_preset, preset.tab || activeTabName());
+        for (const id of missingIds) {
+            const field = sourceBaseline[id];
+            if (!field || ids.has(id)) continue;
+            result.push(field);
+            ids.add(id);
+        }
+
+        return result;
     }
 
     function enrichPresetFields(entries) {
