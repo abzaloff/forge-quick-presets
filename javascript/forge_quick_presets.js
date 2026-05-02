@@ -11,6 +11,7 @@
         img2img_sampling: "img2img_scheduler",
         img2img_scheduler: "img2img_sampling",
     };
+    const DIMENSION_FIELD_IDS = new Set(["txt2img_width", "txt2img_height", "img2img_width", "img2img_height"]);
     const EXCLUDED_ID_PATTERNS = [
         /^forge_ui_preset$/,
         /^forge_ui_dtype$/,
@@ -1082,6 +1083,7 @@
             for (const field of regularFields) {
                 if (await applyField(field)) applied += 1;
             }
+            restoreAspectRatioHelperIfNeeded(regularFields);
 
             if (scriptFields.length > 0) {
                 const scriptRegularFields = regularFields.filter((item) => item.id?.startsWith("script_"));
@@ -1284,6 +1286,7 @@
         for (const field of regularFields) {
             if (await applyField(field)) appliedCount += 1;
         }
+        restoreAspectRatioHelperIfNeeded(regularFields);
 
         if (showEmptyStatus || resetFields.length > 0) {
             state.appliedFields[tab] = [];
@@ -1291,6 +1294,25 @@
         }
 
         return null;
+    }
+
+    function restoreAspectRatioHelperIfNeeded(fields) {
+        if (!fields.some((field) => DIMENSION_FIELD_IDS.has(field?.id))) return;
+        window.setTimeout(() => restoreAspectRatioHelperSelect(activeTabName()), 0);
+        window.setTimeout(() => restoreAspectRatioHelperSelect(activeTabName()), 250);
+    }
+
+    function restoreAspectRatioHelperSelect(tab) {
+        const select = findComponentById(`${tab}_select_aspect_ratio`);
+        if (!select || select.tagName !== "SELECT") return;
+        const hasSelection = select.selectedIndex >= 0 && select.value;
+        if (hasSelection) return;
+
+        const offOption = Array.from(select.options).find((option) => option.value === "Off" || option.textContent?.trim() === "Off");
+        if (!offOption) return;
+        select.value = offOption.value || offOption.textContent;
+        select.selectedIndex = Array.from(select.options).indexOf(offOption);
+        select.dispatchEvent(new Event("change", { bubbles: true }));
     }
 
     function fallbackBaselineField(field) {
