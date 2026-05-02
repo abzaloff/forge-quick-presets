@@ -138,6 +138,24 @@
     color: #ff7a7a;
 }
 
+.forge-quick-presets-panel .fqp-status.fqp-loading::after {
+    display: inline-block;
+    width: 1.5em;
+    overflow: hidden;
+    vertical-align: bottom;
+    content: "...";
+    animation: fqp-status-dots 1.1s steps(4, end) infinite;
+}
+
+@keyframes fqp-status-dots {
+    0% {
+        width: 0;
+    }
+    100% {
+        width: 1.5em;
+    }
+}
+
 .fqp-silent-dropdown [role="listbox"]:has([role="option"]),
 .fqp-silent-dropdown .options:has([role="option"]),
 .fqp-silent-dropdown .options:has(li),

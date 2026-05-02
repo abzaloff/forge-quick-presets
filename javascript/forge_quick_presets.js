@@ -856,11 +856,21 @@
         return await response.json();
     }
 
-    function setStatus(text, isError, panel = currentPanel()) {
+    function setStatus(text, isError, panel = currentPanel(), options = {}) {
         const status = panel?.querySelector(".fqp-status");
         if (!status) return;
         status.textContent = text || "";
         status.classList.toggle("fqp-error", Boolean(isError));
+        status.classList.toggle("fqp-loading", Boolean(options.loading));
+    }
+
+    function setPanelBusy(panel = currentPanel(), busy = false) {
+        state.busy = Boolean(busy);
+        panel?.classList.toggle("fqp-busy", state.busy);
+        for (const control of Array.from(panel?.querySelectorAll("select, button") || [])) {
+            control.disabled = state.busy;
+        }
+        if (!state.busy) updateApplyButtonState(panel);
     }
 
     function selectedPresetKey(panel = currentPanel()) {
@@ -883,7 +893,7 @@
         const button = panel?.querySelector(".fqp-apply");
         if (!button) return;
         const applied = Boolean(panel.dataset.appliedKey && panel.dataset.appliedKey === selectedPresetKey(panel));
-        button.disabled = applied;
+        button.disabled = state.busy || applied;
         button.classList.toggle("fqp-applied", applied);
         button.textContent = applied ? "Applied" : "Apply";
         button.title = applied
@@ -1041,9 +1051,11 @@
         const panel = currentPanel();
         const select = panel?.querySelector(".fqp-select");
         const key = select?.value;
-        if (!key) return;
+        if (!key || state.busy) return;
 
         beginPreserveScroll();
+        setPanelBusy(panel, true);
+        setStatus("Applying preset", false, panel, { loading: true });
         try {
             const preset = await request(`/get/${encodeURIComponent(key)}`);
             let applied = 0;
@@ -1086,6 +1098,7 @@
             setAppliedState(panel, key);
             setStatus(`Applied ${applied}/${entries.length} fields.`, false, panel);
         } finally {
+            setPanelBusy(panel, false);
             endPreserveScroll();
         }
     }
@@ -1210,7 +1223,10 @@
 
     async function resetToBaseline() {
         const panel = currentPanel();
+        if (state.busy) return;
         beginPreserveScroll();
+        setPanelBusy(panel, true);
+        setStatus("Resetting", false, panel, { loading: true });
         try {
             const result = await resetChangedFieldsToBaseline(panel, true);
             await deactivateScriptsSectionIfNone();
@@ -1219,6 +1235,7 @@
             clearAppliedState(panel);
             if (result) setStatus(`Reset ${result.applied}/${result.total} changed fields.`, false, panel);
         } finally {
+            setPanelBusy(panel, false);
             endPreserveScroll();
         }
     }
@@ -1351,6 +1368,8 @@
 
     function wirePanel(panel) {
         panel.querySelector(".fqp-select").addEventListener("change", () => {
+            clearAppliedState(panel);
+            setStatus("", false, panel);
             updateApplyButtonState(panel);
             if (selectedPresetKey(panel)) {
                 applySelected().catch((error) => setStatus(error.message, true, panel));
