@@ -914,9 +914,20 @@
         const domBaseline = snapshot();
         const forgeBaseline = await forgeConfigBaseline(currentForgePreset(), tab);
         state.baselines[tab] = {
-            ...domBaseline,
+            ...baselineWithoutAppliedPresetFields(domBaseline, tab),
             ...resolveForgeBaselineFields(forgeBaseline, domBaseline),
         };
+    }
+
+    function baselineWithoutAppliedPresetFields(baseline, tab) {
+        const cleaned = { ...baseline };
+        for (const field of state.appliedFields[tab] || []) {
+            if (!field?.id || !cleaned[field.id]) continue;
+            if (!equalValues(cleaned[field.id].value, field.value)) continue;
+            const fallback = fallbackBaselineField(field);
+            if (fallback) cleaned[field.id] = fallback;
+        }
+        return cleaned;
     }
 
     async function forgeConfigBaseline(preset, tab) {
@@ -1197,7 +1208,8 @@
             if (options.preserveIds?.has(id)) continue;
             const field = current[id] || priorApplied.find((item) => item.id === id);
             if (!field) continue;
-            const baselineField = baseline[id] || fallbackBaselineField(field);
+            const priorAppliedField = priorApplied.find((item) => item.id === id);
+            const baselineField = (priorAppliedField && fallbackBaselineField(priorAppliedField)) || baseline[id] || fallbackBaselineField(field);
             if (!baselineField) continue;
             if (!equalValues(field.value, baselineField.value)) {
                 resetFields.push(baselineField);
