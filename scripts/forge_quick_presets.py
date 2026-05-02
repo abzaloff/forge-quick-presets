@@ -15,6 +15,31 @@ EXTENSION_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PRESETS_DIR = os.path.join(EXTENSION_ROOT, "presets")
 PRESETS_FILE = os.path.join(PRESETS_DIR, "user_presets.json")
 MAX_PRESET_BACKUPS = 3
+FORGE_BASELINE_FIELDS = {
+    "txt2img": {
+        "txt2img_sampling": ("{preset}_t2i_sampler", "Sampling Method"),
+        "txt2img_scheduler": ("{preset}_t2i_scheduler", "Schedule Type"),
+        "txt2img_steps": ("{preset}_t2i_step", "Steps"),
+        "txt2img_width": ("{preset}_t2i_width", "Width"),
+        "txt2img_height": ("{preset}_t2i_height", "Height"),
+        "txt2img_cfg_scale": ("{preset}_t2i_cfg", "CFG Scale"),
+        "txt2img_distilled_cfg_scale": ("{preset}_t2i_dcfg", "Distilled CFG Scale"),
+        "txt2img_batch_size": ("{preset}_t2i_batch_size", "Batch Size"),
+        "txt2img_hr_second_pass_steps": ("{preset}_t2i_hr_step", "Hires steps"),
+        "txt2img_hr_cfg": ("{preset}_t2i_hr_cfg", "Hires CFG Scale"),
+        "txt2img_hr_distilled_cfg_scale": ("{preset}_t2i_hr_dcfg", "Hires Distilled CFG Scale"),
+    },
+    "img2img": {
+        "img2img_sampling": ("{preset}_i2i_sampler", "Sampling Method"),
+        "img2img_scheduler": ("{preset}_i2i_scheduler", "Schedule Type"),
+        "img2img_steps": ("{preset}_i2i_step", "Steps"),
+        "img2img_width": ("{preset}_i2i_width", "Width"),
+        "img2img_height": ("{preset}_i2i_height", "Height"),
+        "img2img_cfg_scale": ("{preset}_i2i_cfg", "CFG Scale"),
+        "img2img_distilled_cfg_scale": ("{preset}_i2i_dcfg", "Distilled CFG Scale"),
+        "img2img_batch_size": ("{preset}_i2i_batch_size", "Batch Size"),
+    },
+}
 
 
 class PresetPayload(BaseModel):
@@ -204,10 +229,44 @@ def _script_choices() -> dict[str, list[str]]:
         return {"txt2img": ["None"], "img2img": ["None"]}
 
 
+def _forge_baseline(preset: str, tab: str) -> dict[str, Any]:
+    try:
+        from modules import shared
+    except Exception:
+        return {"fields": {}}
+
+    clean_preset = (preset or "").strip()
+    clean_tab = tab if tab in FORGE_BASELINE_FIELDS else "txt2img"
+    if not clean_preset:
+        clean_preset = getattr(shared.opts, "forge_preset", "")
+
+    fields: dict[str, Any] = {}
+    for field_id, (option_template, label) in FORGE_BASELINE_FIELDS[clean_tab].items():
+        option_name = option_template.format(preset=clean_preset)
+        if not hasattr(shared.opts, option_name):
+            continue
+
+        value = getattr(shared.opts, option_name)
+        if isinstance(value, (int, float)) and value <= 0:
+            continue
+
+        fields[field_id] = {
+            "id": field_id,
+            "label": label,
+            "value": value,
+        }
+
+    return {"preset": clean_preset, "tab": clean_tab, "fields": fields}
+
+
 def quick_presets_api(_: Any, app: FastAPI) -> None:
     @app.get("/forge-quick-presets/list")
     def list_presets():
         return _list_presets()
+
+    @app.get("/forge-quick-presets/baseline/{preset}/{tab}")
+    def forge_baseline(preset: str, tab: str):
+        return _forge_baseline(preset, tab)
 
     @app.get("/forge-quick-presets/get/{key:path}")
     def get_preset(key: str):

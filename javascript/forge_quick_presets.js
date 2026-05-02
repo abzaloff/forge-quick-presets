@@ -323,6 +323,7 @@
 
         for (const [id, field] of Object.entries(current)) {
             if (isControlNetTypeFilterId(id)) continue;
+            if (isUnsafeUnstableEnableField(field)) continue;
             if (!isControlNetFieldEnabled(id, current)) continue;
             if (!baseline[id] || !equalValues(field.value, baseline[id].value)) {
                 changed[id] = field;
@@ -700,6 +701,7 @@
     }
 
     function findComponentForField(field) {
+        if (isUnsafeUnstableEnableField(field)) return null;
         const exact = findComponentById(field.id);
         if (exact) return exact;
         if (!isUnstableFieldId(field.id)) return null;
@@ -714,6 +716,10 @@
 
     function isUnstableFieldId(id) {
         return /^\.?input-accordion-\d+$/.test(id || "") || /^component-\d+$/.test(id || "");
+    }
+
+    function isUnsafeUnstableEnableField(field) {
+        return isUnstableFieldId(field?.id) && field?.label === "Enable";
     }
 
     function sameFieldKind(root, field) {
@@ -819,7 +825,7 @@
     }
 
     async function applyMissingUnstableField(field) {
-        if (!isUnstableFieldId(field.id) || field.value !== true) return false;
+        if (!isUnstableFieldId(field.id) || isUnsafeUnstableEnableField(field) || field.value !== true) return false;
         return await activatePanelByLabel(field.label);
     }
 
@@ -903,9 +909,40 @@
         }
     }
 
-    function captureBaseline() {
+    async function captureBaseline() {
         const tab = activeTabName();
-        state.baselines[tab] = snapshot();
+        const domBaseline = snapshot();
+        const forgeBaseline = await forgeConfigBaseline(currentForgePreset(), tab);
+        state.baselines[tab] = {
+            ...domBaseline,
+            ...resolveForgeBaselineFields(forgeBaseline, domBaseline),
+        };
+    }
+
+    async function forgeConfigBaseline(preset, tab) {
+        if (!preset) return {};
+        try {
+            const data = await request(`/baseline/${encodeURIComponent(preset)}/${tab}`);
+            return data.fields || {};
+        } catch {
+            return {};
+        }
+    }
+
+    function resolveForgeBaselineFields(fields, domBaseline) {
+        const resolved = {};
+        for (const field of Object.values(fields || {})) {
+            if (!field?.id) continue;
+            const root = findComponentForField(field);
+            const id = root?.id || field.id;
+            if (!domBaseline[id]) continue;
+            resolved[id] = {
+                ...domBaseline[id],
+                ...field,
+                id,
+            };
+        }
+        return resolved;
     }
 
     async function saveChanged() {
@@ -985,11 +1022,10 @@
             const preset = await request(`/get/${encodeURIComponent(key)}`);
             let applied = 0;
             const fields = preset.fields || {};
-            const entries = enrichPresetFields(Object.values(fields));
+            const entries = enrichPresetFields(Object.values(fields)).filter((field) => !isUnsafeUnstableEnableField(field));
             const nextFieldIds = new Set(entries.map((field) => field.id).filter(Boolean));
 
             await resetChangedFieldsToBaseline(panel, false, {
-                onlyApplied: true,
                 preserveIds: nextFieldIds,
             });
 
