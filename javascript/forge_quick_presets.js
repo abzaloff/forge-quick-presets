@@ -738,6 +738,10 @@
         return isUnstableFieldId(field?.id) && field?.label === "Enable";
     }
 
+    function isUnstableBooleanField(field) {
+        return isUnstableFieldId(field?.id) && typeof field?.value === "boolean";
+    }
+
     function sameFieldKind(root, field) {
         if (typeof field.value === "boolean") {
             return Boolean(root.querySelector("input[type='checkbox']"));
@@ -865,6 +869,95 @@
         status.classList.toggle("fqp-loading", Boolean(options.loading));
     }
 
+    function syncPresetSelectDisplay(panel = currentPanel()) {
+        const select = panel?.querySelector(".fqp-select");
+        const display = panel?.querySelector(".fqp-select-display");
+        const menu = panel?.querySelector(".fqp-select-menu");
+        if (!select || !display || !menu) return;
+
+        syncPresetSelectTheme(panel);
+        const selected = select.selectedOptions?.[0] || select.options[select.selectedIndex];
+        display.textContent = selected?.textContent || "None";
+        menu.innerHTML = "";
+
+        for (const option of Array.from(select.options)) {
+            const item = document.createElement("button");
+            item.type = "button";
+            item.className = "fqp-select-option";
+            item.setAttribute("role", "option");
+            item.setAttribute("aria-selected", option.value === select.value ? "true" : "false");
+            item.dataset.value = option.value;
+            item.textContent = option.textContent;
+            item.addEventListener("click", () => {
+                select.value = option.value;
+                select.dispatchEvent(new Event("change", { bubbles: true }));
+                closePresetSelect(panel);
+                syncPresetSelectDisplay(panel);
+            });
+            menu.appendChild(item);
+        }
+    }
+
+    function syncPresetSelectTheme(panel = currentPanel()) {
+        const select = panel?.querySelector(".fqp-select");
+        const wrap = panel?.querySelector(".fqp-select-wrap");
+        if (!select || !wrap) return;
+
+        const style = getComputedStyle(select);
+        wrap.style.setProperty("--fqp-select-background", style.backgroundColor);
+        wrap.style.setProperty("--fqp-select-border", style.borderColor);
+        wrap.style.setProperty("--fqp-select-color", style.color);
+    }
+
+    function openPresetSelect(panel) {
+        const display = panel?.querySelector(".fqp-select-display");
+        const menu = panel?.querySelector(".fqp-select-menu");
+        if (!display || !menu || state.busy) return;
+        syncPresetSelectDisplay(panel);
+        display.setAttribute("aria-expanded", "true");
+        menu.hidden = false;
+    }
+
+    function closePresetSelect(panel) {
+        const display = panel?.querySelector(".fqp-select-display");
+        const menu = panel?.querySelector(".fqp-select-menu");
+        if (!display || !menu) return;
+        display.setAttribute("aria-expanded", "false");
+        menu.hidden = true;
+    }
+
+    function togglePresetSelect(panel) {
+        const menu = panel?.querySelector(".fqp-select-menu");
+        if (!menu || menu.hidden) openPresetSelect(panel);
+        else closePresetSelect(panel);
+    }
+
+    function wirePresetSelect(panel) {
+        const display = panel.querySelector(".fqp-select-display");
+        const select = panel.querySelector(".fqp-select");
+        if (!display || !select) return;
+
+        display.addEventListener("click", () => togglePresetSelect(panel));
+        display.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                togglePresetSelect(panel);
+            } else if (event.key === "Escape") {
+                closePresetSelect(panel);
+            } else if (event.key === "ArrowDown") {
+                event.preventDefault();
+                openPresetSelect(panel);
+            }
+        });
+        select.addEventListener("change", () => syncPresetSelectDisplay(panel));
+        syncPresetSelectTheme(panel);
+        window.setTimeout(() => syncPresetSelectTheme(panel), 0);
+        window.setTimeout(() => syncPresetSelectTheme(panel), 500);
+        document.addEventListener("click", (event) => {
+            if (!panel.contains(event.target)) closePresetSelect(panel);
+        });
+    }
+
     function setPanelBusy(panel = currentPanel(), busy = false) {
         state.busy = Boolean(busy);
         panel?.classList.toggle("fqp-busy", state.busy);
@@ -921,6 +1014,7 @@
             select.appendChild(option);
         }
         select.value = previous;
+        syncPresetSelectDisplay(panel);
         updateApplyButtonState(panel);
     }
 
@@ -1008,6 +1102,7 @@
         updatePresetSelect(panel);
         const select = panel?.querySelector(".fqp-select");
         if (select) select.value = key;
+        syncPresetSelectDisplay(panel);
         state.appliedFields[tab] = Object.values(fields);
         setAppliedState(panel, key);
         setStatus(`Saved ${count} changed fields.`, false, panel);
@@ -1043,6 +1138,7 @@
         state.presets = data.presets || [];
         updatePresetSelect(panel);
         select.value = key;
+        syncPresetSelectDisplay(panel);
         state.appliedFields[activeTabName()] = Object.values(fields);
         setAppliedState(panel, key);
         setStatus(`Updated ${name} with ${count} fields.`, false, panel);
@@ -1053,6 +1149,7 @@
         const select = panel?.querySelector(".fqp-select");
         const key = select?.value;
         if (!key || state.busy) return;
+        const tab = activeTabName();
 
         beginPreserveScroll();
         setPanelBusy(panel, true);
@@ -1066,6 +1163,7 @@
             const nextFieldIds = new Set(entries.map((field) => field.id).filter(Boolean));
 
             await resetChangedFieldsToBaseline(panel, false, {
+                tab,
                 preserveIds: nextFieldIds,
             });
 
@@ -1083,7 +1181,7 @@
             for (const field of regularFields) {
                 if (await applyField(field)) applied += 1;
             }
-            restoreAspectRatioHelperIfNeeded(regularFields);
+            restoreAspectRatioHelperIfNeeded(regularFields, tab);
 
             if (scriptFields.length > 0) {
                 const scriptRegularFields = regularFields.filter((item) => item.id?.startsWith("script_"));
@@ -1096,7 +1194,7 @@
                 }
             }
 
-            state.appliedFields[activeTabName()] = entries;
+            state.appliedFields[tab] = entries;
             setAppliedState(panel, key);
             setStatus(`Applied ${applied}/${entries.length} fields.`, false, panel);
         } finally {
@@ -1220,20 +1318,23 @@
         state.presets = data.presets || [];
         clearAppliedState(panel);
         updatePresetSelect(panel);
+        syncPresetSelectDisplay(panel);
         setStatus("Preset deleted.", false, panel);
     }
 
     async function resetToBaseline() {
         const panel = currentPanel();
         if (state.busy) return;
+        const tab = activeTabName();
         beginPreserveScroll();
         setPanelBusy(panel, true);
         setStatus("Resetting", false, panel, { loading: true });
         try {
-            const result = await resetChangedFieldsToBaseline(panel, true);
+            const result = await resetChangedFieldsToBaseline(panel, true, { tab });
             await deactivateScriptsSectionIfNone();
             const select = panel?.querySelector(".fqp-select");
             if (select) select.value = "";
+            syncPresetSelectDisplay(panel);
             clearAppliedState(panel);
             if (result) setStatus(`Reset ${result.applied}/${result.total} changed fields.`, false, panel);
         } finally {
@@ -1243,7 +1344,7 @@
     }
 
     async function resetChangedFieldsToBaseline(panel, showEmptyStatus, options = {}) {
-        const tab = activeTabName();
+        const tab = options.tab || activeTabName();
         const baseline = state.baselines[tab];
         if (!baseline) {
             if (showEmptyStatus) setStatus("No baseline for this tab yet.", true, panel);
@@ -1263,7 +1364,7 @@
             const field = current[id] || priorApplied.find((item) => item.id === id);
             if (!field) continue;
             const priorAppliedField = priorApplied.find((item) => item.id === id);
-            const baselineField = (priorAppliedField && fallbackBaselineField(priorAppliedField)) || baseline[id] || fallbackBaselineField(field);
+            const baselineField = fallbackForResetField(field, priorAppliedField) || baseline[id] || fallbackBaselineField(field);
             if (!baselineField) continue;
             if (!equalValues(field.value, baselineField.value)) {
                 resetFields.push(baselineField);
@@ -1286,7 +1387,7 @@
         for (const field of regularFields) {
             if (await applyField(field)) appliedCount += 1;
         }
-        restoreAspectRatioHelperIfNeeded(regularFields);
+        restoreAspectRatioHelperIfNeeded(regularFields, tab);
 
         if (showEmptyStatus || resetFields.length > 0) {
             state.appliedFields[tab] = [];
@@ -1296,10 +1397,16 @@
         return null;
     }
 
-    function restoreAspectRatioHelperIfNeeded(fields) {
+    function fallbackForResetField(field, priorAppliedField) {
+        if (priorAppliedField) return fallbackBaselineField(priorAppliedField);
+        if (isUnstableBooleanField(field)) return fallbackBaselineField(field);
+        return null;
+    }
+
+    function restoreAspectRatioHelperIfNeeded(fields, tab = activeTabName()) {
         if (!fields.some((field) => DIMENSION_FIELD_IDS.has(field?.id))) return;
-        window.setTimeout(() => restoreAspectRatioHelperSelect(activeTabName()), 0);
-        window.setTimeout(() => restoreAspectRatioHelperSelect(activeTabName()), 250);
+        window.setTimeout(() => restoreAspectRatioHelperSelect(tab), 0);
+        window.setTimeout(() => restoreAspectRatioHelperSelect(tab), 250);
     }
 
     function restoreAspectRatioHelperSelect(tab) {
@@ -1389,6 +1496,7 @@
     }
 
     function wirePanel(panel) {
+        wirePresetSelect(panel);
         panel.querySelector(".fqp-select").addEventListener("change", () => {
             clearAppliedState(panel);
             setStatus("", false, panel);
@@ -1417,14 +1525,18 @@
             </div>
             <div class="fqp-body">
                 <div class="fqp-row fqp-preset-row">
-                    <select class="fqp-select" aria-label="Quick preset" title="Saved user preset with only changed UI fields."></select>
-                    <button class="fqp-apply" type="button" title="Apply the selected quick preset to the current Forge UI.">Apply</button>
+                    <div class="fqp-select-wrap">
+                        <select class="fqp-select" aria-label="Quick preset" title="Saved user preset with only changed UI fields." tabindex="-1" aria-hidden="true"></select>
+                        <button class="fqp-select-display" type="button" role="combobox" aria-expanded="false" aria-haspopup="listbox" title="Saved user preset with only changed UI fields.">None</button>
+                        <div class="fqp-select-menu" role="listbox" hidden></div>
+                    </div>
+                    <button class="fqp-apply lg primary gradio-button custom-button" type="button" title="Apply the selected quick preset to the current Forge UI.">Apply</button>
                 </div>
                 <div class="fqp-row fqp-actions">
-                    <button class="fqp-save" type="button" title="Save only fields changed since Baseline. Model, VAE, prompts, images and uploads are skipped.">Save Changed</button>
-                    <button class="fqp-update" type="button" title="Update the selected quick preset with the current changed fields.">Update</button>
-                    <button class="fqp-reset" type="button" title="Reset changed fields in the current tab back to Baseline without changing the native Forge UI Preset.">Reset</button>
-                    <button class="fqp-delete" type="button" title="Delete the selected quick preset from the JSON file.">Delete</button>
+                    <button class="fqp-save lg secondary gradio-button custom-button" type="button" title="Save only fields changed since Baseline. Model, VAE, prompts, images and uploads are skipped.">Save Changed</button>
+                    <button class="fqp-update lg secondary gradio-button custom-button" type="button" title="Update the selected quick preset with the current changed fields.">Update</button>
+                    <button class="fqp-reset lg secondary gradio-button custom-button" type="button" title="Reset changed fields in the current tab back to Baseline without changing the native Forge UI Preset.">Reset</button>
+                    <button class="fqp-delete lg secondary gradio-button custom-button" type="button" title="Delete the selected quick preset from the JSON file.">Delete</button>
                 </div>
                 <div class="fqp-status"></div>
             </div>

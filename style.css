@@ -1,13 +1,13 @@
 .forge-quick-presets-panel {
     margin-top: 10px;
-    border: 1px solid var(--border-color-primary, #344156);
+    border: 1px solid var(--border-color-primary, var(--block-border-color));
     border-radius: 6px;
-    background: var(--block-background-fill, #111827);
-    color: var(--body-text-color, #d8dee9);
+    background: var(--block-background-fill);
+    color: var(--body-text-color);
 }
 
 .forge-quick-presets-panel .fqp-head {
-    border-bottom: 1px solid var(--border-color-primary, #344156);
+    border-bottom: 1px solid var(--border-color-primary, var(--block-border-color));
 }
 
 .forge-quick-presets-panel .fqp-toggle {
@@ -19,6 +19,10 @@
     text-align: left;
     font-weight: 600;
     cursor: pointer;
+}
+
+.forge-quick-presets-panel .fqp-toggle:hover {
+    background: transparent !important;
 }
 
 .forge-quick-presets-panel .fqp-body {
@@ -54,16 +58,8 @@
 }
 
 .forge-quick-presets-panel button {
-    border: 1px solid var(--button-secondary-border-color, var(--border-color-primary, #3b4658));
-    background: var(--button-secondary-background-fill, #273244);
-    color: var(--button-secondary-text-color, var(--body-text-color, #eef2f7));
     padding: 0 12px;
     cursor: pointer;
-}
-
-.forge-quick-presets-panel button:hover {
-    background: var(--button-secondary-background-fill-hover, #334155);
-    border-color: var(--button-secondary-border-color-hover, #526073);
 }
 
 .forge-quick-presets-panel button:active {
@@ -78,20 +74,11 @@
 
 .forge-quick-presets-panel .fqp-apply {
     display: none;
-    border-color: var(--button-primary-border-color, #f97316);
-    background: var(--button-primary-background-fill, #ff5d1a);
-    color: var(--button-primary-text-color, #ffffff);
-}
-
-.forge-quick-presets-panel .fqp-apply:hover {
-    background: var(--button-primary-background-fill-hover, #ff6f2c);
 }
 
 .forge-quick-presets-panel .fqp-apply.fqp-applied,
 .forge-quick-presets-panel .fqp-apply.fqp-applied:hover {
-    border-color: var(--button-secondary-border-color, var(--border-color-primary, #3b4658));
-    background: var(--button-secondary-background-fill, #273244);
-    color: var(--body-text-color-subdued, #9aa7b6);
+    color: var(--body-text-color-subdued, inherit);
 }
 
 .forge-quick-presets-panel .fqp-toggle {
@@ -99,32 +86,97 @@
 }
 
 .forge-quick-presets-panel select {
-    border: 1px solid var(--input-border-color, var(--border-color-primary, #344156));
-    background-color: var(--input-background-fill, var(--block-background-fill, #1f2937));
-    color: var(--input-text-color, var(--body-text-color, #e5e7eb));
-    color-scheme: dark;
+    border: 1px solid var(--input-border-color);
+    background: var(--input-background-fill);
+    color: var(--input-text-color);
+    color-scheme: inherit;
     padding: 0 12px;
 }
 
+.forge-quick-presets-panel .fqp-select {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.forge-quick-presets-panel .fqp-select-wrap {
+    position: relative;
+    min-width: 0;
+}
+
+.forge-quick-presets-panel .fqp-select-display {
+    width: 100%;
+    min-height: 36px;
+    border: 1px solid var(--fqp-select-border, var(--input-border-color));
+    border-radius: 6px;
+    background: var(--fqp-select-background, var(--input-background-fill));
+    color: var(--fqp-select-color, var(--input-text-color));
+    padding: 0 12px;
+    text-align: left;
+}
+
+.forge-quick-presets-panel .fqp-select-display:hover,
+.forge-quick-presets-panel .fqp-select-display:focus {
+    border-color: var(--fqp-select-border, var(--input-border-color-focus));
+    background: var(--fqp-select-background, var(--input-background-fill));
+    color: var(--fqp-select-color, var(--input-text-color));
+}
+
+.forge-quick-presets-panel .fqp-select-menu {
+    position: absolute;
+    z-index: 50;
+    top: calc(100% + 2px);
+    right: 0;
+    left: 0;
+    border: 1px solid var(--fqp-select-border, var(--input-border-color));
+    border-radius: 0 0 6px 6px;
+    background: var(--fqp-select-background, var(--input-background-fill));
+    color: var(--fqp-select-color, var(--input-text-color));
+    overflow: hidden;
+}
+
+.forge-quick-presets-panel .fqp-select-option {
+    display: block;
+    width: 100%;
+    min-height: 28px;
+    border: 0;
+    border-radius: 0;
+    background: var(--fqp-select-background, var(--input-background-fill));
+    color: var(--fqp-select-color, var(--input-text-color));
+    padding: 4px 12px;
+    text-align: left;
+}
+
+.forge-quick-presets-panel .fqp-select-option:hover,
+.forge-quick-presets-panel .fqp-select-option[aria-selected="true"] {
+    background: var(--block-label-background-fill, var(--fqp-select-background, var(--input-background-fill)));
+    color: var(--fqp-select-color, var(--input-text-color));
+}
+
 .forge-quick-presets-panel select:focus {
-    outline: 1px solid var(--input-border-color-focus, var(--button-primary-border-color, #7aa2ff));
+    border-color: var(--input-border-color-focus);
+    outline: 1px solid var(--input-border-color-focus);
     outline-offset: 1px;
 }
 
 .forge-quick-presets-panel select option {
-    background-color: var(--input-background-fill, #1f2937);
-    color: var(--input-text-color, #e5e7eb);
+    background-color: var(--input-background-fill);
+    color: var(--input-text-color);
 }
 
 .forge-quick-presets-panel select option:checked {
-    background-color: var(--button-primary-background-fill, #2563eb);
-    color: var(--button-primary-text-color, #ffffff);
+    background-color: var(--input-background-fill);
+    box-shadow: 0 0 0 100vmax var(--input-background-fill) inset;
+    color: var(--input-text-color);
+    -webkit-text-fill-color: var(--input-text-color);
 }
 
 .forge-quick-presets-panel .fqp-status {
     display: none;
     min-height: 0;
-    color: var(--body-text-color-subdued, #9aa7b6);
+    color: var(--body-text-color-subdued, var(--body-text-color));
     font-size: 12px;
     line-height: 16px;
 }
@@ -135,7 +187,7 @@
 }
 
 .forge-quick-presets-panel .fqp-status.fqp-error {
-    color: #ff7a7a;
+    color: var(--error-text-color, var(--body-text-color));
 }
 
 .forge-quick-presets-panel .fqp-status.fqp-loading::after {
