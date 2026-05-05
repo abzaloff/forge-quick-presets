@@ -55,6 +55,8 @@
         scrollPreserveCanceled: false,
         scrollCancelCleanup: null,
         mountFrame: null,
+        themeSyncWired: false,
+        themeSyncPending: false,
     };
 
     function app() {
@@ -909,6 +911,38 @@
         wrap.style.setProperty("--fqp-select-color", style.color);
     }
 
+    function syncAllPresetSelectThemes() {
+        for (const panel of Array.from(app().querySelectorAll(`.${PANEL_CLASS}`))) {
+            syncPresetSelectTheme(panel);
+        }
+    }
+
+    function schedulePresetSelectThemeSync() {
+        if (state.themeSyncPending) return;
+        state.themeSyncPending = true;
+        const delays = [0, 50, 150, 350, 700];
+        for (const delay of delays) {
+            window.setTimeout(syncAllPresetSelectThemes, delay);
+        }
+        window.setTimeout(() => {
+            state.themeSyncPending = false;
+        }, delays[delays.length - 1]);
+    }
+
+    function wireThemeSync() {
+        if (state.themeSyncWired) return;
+        state.themeSyncWired = true;
+
+        document.addEventListener("click", schedulePresetSelectThemeSync, true);
+        document.addEventListener("input", schedulePresetSelectThemeSync, true);
+        document.addEventListener("change", schedulePresetSelectThemeSync, true);
+
+        const observer = new MutationObserver(schedulePresetSelectThemeSync);
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
+        if (document.body) observer.observe(document.body, { attributes: true, attributeFilter: ["class", "style"] });
+        if (document.head) observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    }
+
     function openPresetSelect(panel) {
         const display = panel?.querySelector(".fqp-select-display");
         const menu = panel?.querySelector(".fqp-select-menu");
@@ -950,9 +984,9 @@
             }
         });
         select.addEventListener("change", () => syncPresetSelectDisplay(panel));
+        wireThemeSync();
         syncPresetSelectTheme(panel);
-        window.setTimeout(() => syncPresetSelectTheme(panel), 0);
-        window.setTimeout(() => syncPresetSelectTheme(panel), 500);
+        schedulePresetSelectThemeSync();
         document.addEventListener("click", (event) => {
             if (!panel.contains(event.target)) closePresetSelect(panel);
         });
