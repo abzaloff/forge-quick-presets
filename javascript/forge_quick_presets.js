@@ -639,8 +639,7 @@
         if (option) {
             dispatchFullClick(option);
             wakeDropdown(root, input, label);
-            await sleep(500);
-            return readDropdown(root) === label;
+            return await waitForDropdownValue(root, label, 8);
         }
 
         trigger.click();
@@ -649,8 +648,7 @@
         focusWithoutScroll(input);
         input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", code: "Enter", bubbles: true, composed: true }));
         input.dispatchEvent(new KeyboardEvent("keyup", { key: "Enter", code: "Enter", bubbles: true, composed: true }));
-        await sleep(500);
-        return readDropdown(root) === label;
+        return await waitForDropdownValue(root, label, 8);
     }
 
     async function keyboardSelectDropdown(root, index, label) {
@@ -669,9 +667,8 @@
             await sleep(30);
         }
         dispatchKeyboard(target, "Enter");
-        await sleep(800);
 
-        return readDropdown(root) === label;
+        return await waitForDropdownValue(root, label, 12);
     }
 
     function dispatchKeyboard(target, key) {
@@ -1095,13 +1092,7 @@
 
             if (scriptFields.length > 0) {
                 const scriptRegularFields = regularFields.filter((item) => item.id?.startsWith("script_"));
-                for (const delay of [500, 1000, 1500]) {
-                    await sleep(delay);
-                    await waitForScriptFields(scriptRegularFields);
-                    for (const field of scriptRegularFields) {
-                        await applyField(field);
-                    }
-                }
+                await stabilizeScriptFields(scriptRegularFields);
             }
 
             state.appliedFields[tab] = entries;
@@ -1190,10 +1181,7 @@
         const scriptFieldIds = fields
             .map((field) => field.id)
             .filter((id) => id?.startsWith("script_"));
-        if (scriptFieldIds.length === 0) {
-            await sleep(700);
-            return;
-        }
+        if (scriptFieldIds.length === 0) return;
 
         for (let attempt = 0; attempt < 20; attempt += 1) {
             const visibleCount = scriptFieldIds
@@ -1203,6 +1191,29 @@
             if (visibleCount === scriptFieldIds.length) return;
             await sleep(150);
         }
+    }
+
+    async function stabilizeScriptFields(fields) {
+        if (fields.length === 0 || fieldsApplied(fields)) return;
+
+        for (const delay of [150, 250, 400, 700, 1000]) {
+            await waitForScriptFields(fields);
+            if (fieldsApplied(fields)) return;
+
+            for (const field of fields) {
+                await applyField(field);
+            }
+            if (fieldsApplied(fields)) return;
+
+            await sleep(delay);
+        }
+    }
+
+    function fieldsApplied(fields) {
+        return fields.every((field) => {
+            const root = findComponentForField(field);
+            return root && equalValues(readValue(root), field.value);
+        });
     }
 
     function uiElementReady(node) {
@@ -1288,7 +1299,7 @@
         }
 
         if (scriptFields.length > 0) {
-            await sleep(800);
+            await sleep(150);
             await deactivateScriptsSectionIfNone();
         }
 
