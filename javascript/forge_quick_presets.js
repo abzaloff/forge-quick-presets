@@ -871,127 +871,6 @@
         status.classList.toggle("fqp-loading", Boolean(options.loading));
     }
 
-    function syncPresetSelectDisplay(panel = currentPanel()) {
-        const select = panel?.querySelector(".fqp-select");
-        const display = panel?.querySelector(".fqp-select-display");
-        const menu = panel?.querySelector(".fqp-select-menu");
-        if (!select || !display || !menu) return;
-
-        syncPresetSelectTheme(panel);
-        const selected = select.selectedOptions?.[0] || select.options[select.selectedIndex];
-        display.textContent = selected?.textContent || "None";
-        menu.innerHTML = "";
-
-        for (const option of Array.from(select.options)) {
-            const item = document.createElement("button");
-            item.type = "button";
-            item.className = "fqp-select-option";
-            item.setAttribute("role", "option");
-            item.setAttribute("aria-selected", option.value === select.value ? "true" : "false");
-            item.dataset.value = option.value;
-            item.textContent = option.textContent;
-            item.addEventListener("click", () => {
-                select.value = option.value;
-                select.dispatchEvent(new Event("change", { bubbles: true }));
-                closePresetSelect(panel);
-                syncPresetSelectDisplay(panel);
-            });
-            menu.appendChild(item);
-        }
-    }
-
-    function syncPresetSelectTheme(panel = currentPanel()) {
-        const select = panel?.querySelector(".fqp-select");
-        const wrap = panel?.querySelector(".fqp-select-wrap");
-        if (!select || !wrap) return;
-
-        const style = getComputedStyle(select);
-        wrap.style.setProperty("--fqp-select-background", style.backgroundColor);
-        wrap.style.setProperty("--fqp-select-border", style.borderColor);
-        wrap.style.setProperty("--fqp-select-color", style.color);
-    }
-
-    function syncAllPresetSelectThemes() {
-        for (const panel of Array.from(app().querySelectorAll(`.${PANEL_CLASS}`))) {
-            syncPresetSelectTheme(panel);
-        }
-    }
-
-    function schedulePresetSelectThemeSync() {
-        if (state.themeSyncPending) return;
-        state.themeSyncPending = true;
-        const delays = [0, 50, 150, 350, 700];
-        for (const delay of delays) {
-            window.setTimeout(syncAllPresetSelectThemes, delay);
-        }
-        window.setTimeout(() => {
-            state.themeSyncPending = false;
-        }, delays[delays.length - 1]);
-    }
-
-    function wireThemeSync() {
-        if (state.themeSyncWired) return;
-        state.themeSyncWired = true;
-
-        document.addEventListener("click", schedulePresetSelectThemeSync, true);
-        document.addEventListener("input", schedulePresetSelectThemeSync, true);
-        document.addEventListener("change", schedulePresetSelectThemeSync, true);
-
-        const observer = new MutationObserver(schedulePresetSelectThemeSync);
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class", "style"] });
-        if (document.body) observer.observe(document.body, { attributes: true, attributeFilter: ["class", "style"] });
-        if (document.head) observer.observe(document.head, { childList: true, subtree: true, characterData: true });
-    }
-
-    function openPresetSelect(panel) {
-        const display = panel?.querySelector(".fqp-select-display");
-        const menu = panel?.querySelector(".fqp-select-menu");
-        if (!display || !menu || state.busy) return;
-        syncPresetSelectDisplay(panel);
-        display.setAttribute("aria-expanded", "true");
-        menu.hidden = false;
-    }
-
-    function closePresetSelect(panel) {
-        const display = panel?.querySelector(".fqp-select-display");
-        const menu = panel?.querySelector(".fqp-select-menu");
-        if (!display || !menu) return;
-        display.setAttribute("aria-expanded", "false");
-        menu.hidden = true;
-    }
-
-    function togglePresetSelect(panel) {
-        const menu = panel?.querySelector(".fqp-select-menu");
-        if (!menu || menu.hidden) openPresetSelect(panel);
-        else closePresetSelect(panel);
-    }
-
-    function wirePresetSelect(panel) {
-        const display = panel.querySelector(".fqp-select-display");
-        const select = panel.querySelector(".fqp-select");
-        if (!display || !select) return;
-
-        display.addEventListener("click", () => togglePresetSelect(panel));
-        display.addEventListener("keydown", (event) => {
-            if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                togglePresetSelect(panel);
-            } else if (event.key === "Escape") {
-                closePresetSelect(panel);
-            } else if (event.key === "ArrowDown") {
-                event.preventDefault();
-                openPresetSelect(panel);
-            }
-        });
-        select.addEventListener("change", () => syncPresetSelectDisplay(panel));
-        wireThemeSync();
-        syncPresetSelectTheme(panel);
-        schedulePresetSelectThemeSync();
-        document.addEventListener("click", (event) => {
-            if (!panel.contains(event.target)) closePresetSelect(panel);
-        });
-    }
-
     function setPanelBusy(panel = currentPanel(), busy = false) {
         state.busy = Boolean(busy);
         panel?.classList.toggle("fqp-busy", state.busy);
@@ -1048,7 +927,6 @@
             select.appendChild(option);
         }
         select.value = previous;
-        syncPresetSelectDisplay(panel);
         updateApplyButtonState(panel);
     }
 
@@ -1136,7 +1014,6 @@
         updatePresetSelect(panel);
         const select = panel?.querySelector(".fqp-select");
         if (select) select.value = key;
-        syncPresetSelectDisplay(panel);
         state.appliedFields[tab] = Object.values(fields);
         setAppliedState(panel, key);
         setStatus(`Saved ${count} changed fields.`, false, panel);
@@ -1172,7 +1049,6 @@
         state.presets = data.presets || [];
         updatePresetSelect(panel);
         select.value = key;
-        syncPresetSelectDisplay(panel);
         state.appliedFields[activeTabName()] = Object.values(fields);
         setAppliedState(panel, key);
         setStatus(`Updated ${name} with ${count} fields.`, false, panel);
@@ -1352,7 +1228,6 @@
         state.presets = data.presets || [];
         clearAppliedState(panel);
         updatePresetSelect(panel);
-        syncPresetSelectDisplay(panel);
         setStatus("Preset deleted.", false, panel);
     }
 
@@ -1368,7 +1243,6 @@
             await deactivateScriptsSectionIfNone();
             const select = panel?.querySelector(".fqp-select");
             if (select) select.value = "";
-            syncPresetSelectDisplay(panel);
             clearAppliedState(panel);
             if (result) setStatus(`Reset ${result.applied}/${result.total} changed fields.`, false, panel);
         } finally {
@@ -1530,7 +1404,6 @@
     }
 
     function wirePanel(panel) {
-        wirePresetSelect(panel);
         panel.querySelector(".fqp-select").addEventListener("change", () => {
             clearAppliedState(panel);
             setStatus("", false, panel);
@@ -1559,11 +1432,7 @@
             </div>
             <div class="fqp-body">
                 <div class="fqp-row fqp-preset-row">
-                    <div class="fqp-select-wrap">
-                        <select class="fqp-select" aria-label="Quick preset" title="Saved user preset with only changed UI fields." tabindex="-1" aria-hidden="true"></select>
-                        <button class="fqp-select-display" type="button" role="combobox" aria-expanded="false" aria-haspopup="listbox" title="Saved user preset with only changed UI fields.">None</button>
-                        <div class="fqp-select-menu" role="listbox" hidden></div>
-                    </div>
+                    <select class="fqp-select" aria-label="Quick preset" title="Saved user preset with only changed UI fields."></select>
                     <button class="fqp-apply lg primary gradio-button custom-button" type="button" title="Apply the selected quick preset to the current Forge UI.">Apply</button>
                 </div>
                 <div class="fqp-row fqp-actions">

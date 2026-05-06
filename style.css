@@ -93,68 +93,6 @@
     padding: 0 12px;
 }
 
-.forge-quick-presets-panel .fqp-select {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.forge-quick-presets-panel .fqp-select-wrap {
-    position: relative;
-    min-width: 0;
-}
-
-.forge-quick-presets-panel .fqp-select-display {
-    width: 100%;
-    min-height: 36px;
-    border: 1px solid var(--fqp-select-border, var(--input-border-color));
-    border-radius: 6px;
-    background: var(--fqp-select-background, var(--input-background-fill));
-    color: var(--fqp-select-color, var(--input-text-color));
-    padding: 0 12px;
-    text-align: left;
-}
-
-.forge-quick-presets-panel .fqp-select-display:hover,
-.forge-quick-presets-panel .fqp-select-display:focus {
-    border-color: var(--fqp-select-border, var(--input-border-color-focus));
-    background: var(--fqp-select-background, var(--input-background-fill));
-    color: var(--fqp-select-color, var(--input-text-color));
-}
-
-.forge-quick-presets-panel .fqp-select-menu {
-    position: absolute;
-    z-index: 50;
-    top: calc(100% + 2px);
-    right: 0;
-    left: 0;
-    border: 1px solid var(--fqp-select-border, var(--input-border-color));
-    border-radius: 0 0 6px 6px;
-    background: var(--fqp-select-background, var(--input-background-fill));
-    color: var(--fqp-select-color, var(--input-text-color));
-    overflow: hidden;
-}
-
-.forge-quick-presets-panel .fqp-select-option {
-    display: block;
-    width: 100%;
-    min-height: 28px;
-    border: 0;
-    border-radius: 0;
-    background: var(--fqp-select-background, var(--input-background-fill));
-    color: var(--fqp-select-color, var(--input-text-color));
-    padding: 4px 12px;
-    text-align: left;
-}
-
-.forge-quick-presets-panel .fqp-select-option:hover,
-.forge-quick-presets-panel .fqp-select-option[aria-selected="true"] {
-    background: var(--block-label-background-fill, var(--fqp-select-background, var(--input-background-fill)));
-    color: var(--fqp-select-color, var(--input-text-color));
-}
-
 .forge-quick-presets-panel select:focus {
     border-color: var(--input-border-color-focus);
     outline: 1px solid var(--input-border-color-focus);
