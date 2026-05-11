@@ -1093,6 +1093,7 @@
             await resetChangedFieldsToBaseline(panel, false, {
                 tab,
                 preserveIds: nextFieldIds,
+                preserveUnstableBooleans: entries.some((field) => field.id === "script_list"),
             });
 
             const scriptFields = entries.filter((field) => field.id === "script_list");
@@ -1293,18 +1294,24 @@
 
         const current = snapshot();
         const priorApplied = state.appliedFields[tab] || [];
+        const resetOptions = {
+            ...options,
+            preserveUnstableBooleans: options.preserveUnstableBooleans || hasScriptResetContext(current, priorApplied),
+        };
         const appliedIds = priorApplied.map((field) => field.id).filter(Boolean);
-        const candidateIds = new Set(options.onlyApplied ? appliedIds : [
+        const candidateIds = new Set(resetOptions.onlyApplied ? appliedIds : [
             ...Object.keys(current),
             ...appliedIds,
         ]);
         const resetFields = [];
         for (const id of candidateIds) {
-            if (options.preserveIds?.has(id)) continue;
+            if (resetOptions.preserveIds?.has(id)) continue;
             const field = current[id] || priorApplied.find((item) => item.id === id);
             if (!field) continue;
             const priorAppliedField = priorApplied.find((item) => item.id === id);
-            const baselineField = fallbackForResetField(field, priorAppliedField) || baseline[id] || fallbackBaselineField(field);
+            const baselineField = fallbackForResetField(field, priorAppliedField, resetOptions)
+                || baseline[id]
+                || fallbackBaselineFieldForReset(field, priorAppliedField, resetOptions);
             if (!baselineField) continue;
             if (!equalValues(field.value, baselineField.value)) {
                 resetFields.push(baselineField);
@@ -1337,10 +1344,42 @@
         return null;
     }
 
-    function fallbackForResetField(field, priorAppliedField) {
+    function hasScriptResetContext(current, priorApplied) {
+        return isActiveScriptField(current?.script_list)
+            || priorApplied.some((field) => field?.id === "script_list");
+    }
+
+    function isActiveScriptField(field) {
+        const label = scriptFieldLabel(field);
+        return Boolean(label && label !== "None");
+    }
+
+    function fallbackForResetField(field, priorAppliedField, options = {}) {
+        if (shouldPreserveUnstableBooleanFallback(field, priorAppliedField, options)) {
+            return null;
+        }
         if (priorAppliedField) return fallbackBaselineField(priorAppliedField);
         if (isUnstableBooleanField(field)) return fallbackBaselineField(field);
         return null;
+    }
+
+    function fallbackBaselineFieldForReset(field, priorAppliedField, options = {}) {
+        if (shouldPreserveUnstableBooleanFallback(field, priorAppliedField, options)) {
+            return null;
+        }
+        return fallbackBaselineField(field);
+    }
+
+    function shouldPreserveUnstableBooleanFallback(field, priorAppliedField, options = {}) {
+        return Boolean(options.preserveUnstableBooleans && (isGenericBooleanField(field) || isGenericBooleanField(priorAppliedField)));
+    }
+
+    function isGenericBooleanField(field) {
+        if (typeof field?.value !== "boolean") return false;
+        if (field.id?.includes("_controlnet_enable_checkbox")) return false;
+        if ((field.id === "txt2img_enable" || field.id === "img2img_enable") && field.label === "Refiner") return false;
+        if (field.id === "txt2img_hr" || field.id === "img2img_hr") return false;
+        return true;
     }
 
     function restoreAspectRatioHelperIfNeeded(fields, tab = activeTabName()) {
