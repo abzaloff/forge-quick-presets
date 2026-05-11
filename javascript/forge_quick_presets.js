@@ -228,8 +228,9 @@
         const choices = dropdownChoices(root);
         const index = choices.findIndex((choice) => choice === label);
         return {
-            value: index >= 0 ? index : label,
+            value: label,
             displayValue: label,
+            scriptIndex: index >= 0 ? index : null,
         };
     }
 
@@ -282,7 +283,8 @@
         for (const root of componentRoots()) {
             const value = readValue(root);
             if (value === null || value === undefined) continue;
-            const extra = root.id === "script_list" ? { display_value: readScriptList(root).displayValue } : {};
+            const script = root.id === "script_list" ? readScriptList(root) : null;
+            const extra = script ? { display_value: script.displayValue, script_index: script.scriptIndex } : {};
             fields[root.id] = {
                 id: root.id,
                 label: labelFor(root),
@@ -615,10 +617,7 @@
         await activateScriptsSection();
         root = findComponentById(field.id) || root;
 
-        const choices = dropdownChoices(root);
-        let label = field.display_value;
-        if (!label && typeof field.value === "number") label = choices[field.value] || "";
-        if (!label) label = field.value;
+        let label = scriptFieldLabel(field, root);
         if (!label) return false;
 
         if (readDropdown(root) === label) return true;
@@ -628,7 +627,8 @@
         const trigger = listbox || root;
         if (!input || !trigger) return await setDropdown(root, label);
 
-        if (typeof field.value === "number" && await keyboardSelectDropdown(root, field.value, label)) {
+        const currentIndex = dropdownChoices(root).findIndex((choice) => choice === label);
+        if (currentIndex >= 0 && await keyboardSelectDropdown(root, currentIndex, label)) {
             return true;
         }
 
@@ -669,6 +669,27 @@
         dispatchKeyboard(target, "Enter");
 
         return await waitForDropdownValue(root, label, 12);
+    }
+
+    function scriptFieldLabel(field, root = null) {
+        if (!field) return "";
+        if (field.display_value) return `${field.display_value}`;
+        if (typeof field.value === "number") {
+            const choices = dropdownChoices(root || findComponentById(field.id));
+            return choices[field.value] || "";
+        }
+        return field.value === null || field.value === undefined ? "" : `${field.value}`;
+    }
+
+    function normalizeScriptListField(field) {
+        if (field?.id !== "script_list") return field;
+        const label = scriptFieldLabel(field);
+        if (!label) return field;
+        return {
+            ...field,
+            value: label,
+            display_value: field.display_value || label,
+        };
     }
 
     function dispatchKeyboard(target, key) {
@@ -1065,7 +1086,7 @@
             const preset = await request(`/get/${encodeURIComponent(key)}`);
             let applied = 0;
             const fields = preset.fields || {};
-            const rawEntries = await addSourceBaselinePairedEntries(Object.values(fields), preset);
+            const rawEntries = await addSourceBaselinePairedEntries(Object.values(fields).map(normalizeScriptListField), preset);
             const entries = enrichPresetFields(rawEntries).filter((field) => !isUnsafeUnstableEnableField(field));
             const nextFieldIds = new Set(entries.map((field) => field.id).filter(Boolean));
 
