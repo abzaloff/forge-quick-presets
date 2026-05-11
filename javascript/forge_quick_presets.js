@@ -652,6 +652,14 @@
     }
 
     async function keyboardSelectDropdown(root, index, label) {
+        const choices = dropdownChoices(root);
+        const currentLabel = readDropdown(root);
+        const startIndex = Math.max(0, choices.findIndex((choice) => choice === currentLabel));
+        const downSteps = (index - startIndex + choices.length) % choices.length;
+        const upSteps = (startIndex - index + choices.length) % choices.length;
+        const key = upSteps < downSteps ? "ArrowUp" : "ArrowDown";
+        const steps = Math.min(upSteps, downSteps);
+
         const listbox = root.querySelector("[role='listbox']");
         const target = listbox || root.querySelector("input:not([type='hidden'])") || root;
         if (!target) return false;
@@ -660,10 +668,8 @@
         focusWithoutScroll(target);
         await sleep(120);
 
-        dispatchKeyboard(target, "Home");
-        await sleep(40);
-        for (let i = 0; i < index; i += 1) {
-            dispatchKeyboard(target, "ArrowDown");
+        for (let i = 0; i < steps; i += 1) {
+            dispatchKeyboard(target, key);
             await sleep(30);
         }
         dispatchKeyboard(target, "Enter");
