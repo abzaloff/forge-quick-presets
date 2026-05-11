@@ -709,8 +709,21 @@
         const scriptsButton = buttons.find((button) => button.textContent?.trim() === "Scripts");
         if (!scriptsButton) return;
 
+        if (isScriptsSectionOpen(scriptsButton)) return;
+
         dispatchFullClick(scriptsButton);
-        await sleep(300);
+        for (let attempt = 0; attempt < 6; attempt += 1) {
+            await sleep(100);
+            if (isScriptsSectionOpen(scriptsButton)) return;
+        }
+    }
+
+    function isScriptsSectionOpen(scriptsButton) {
+        const scriptRoot = findComponentById("script_list");
+        return isVisible(scriptRoot)
+            || scriptsButton.classList.contains("selected")
+            || scriptsButton.classList.contains("active")
+            || scriptsButton.getAttribute("aria-selected") === "true";
     }
 
     function wakeDropdown(root, input, label) {
